@@ -1,0 +1,5 @@
+package dev.hrutvik.billing.rating;
+import org.junit.jupiter.api.Test; import java.math.BigDecimal; import java.time.Instant; import java.util.*; import static org.assertj.core.api.Assertions.assertThat; import static org.mockito.Mockito.*;
+class RatingServiceTest {
+ @Test void ratesEveryPlanMeterAndTotalsRoundedLines(){var store=mock(RatingStore.class);var subscription=UUID.randomUUID();var plan=UUID.randomUUID();var from=Instant.parse("2026-11-01T00:00:00Z");var to=Instant.parse("2026-12-01T00:00:00Z");when(store.subscription("tenant-a",subscription)).thenReturn(new SubscriptionPlan(subscription,plan,"USD"));when(store.prices(plan)).thenReturn(List.of(new MeterPrice(UUID.randomUUID(),"api_calls",List.of(new PriceTier(BigDecimal.ZERO,null,new BigDecimal("0.01"))))));when(store.quantity("tenant-a",subscription,"api_calls",from,to)).thenReturn(new BigDecimal("1250"));var result=new RatingService(store,new GraduatedPricingCalculator()).preview("tenant-a",subscription,from,to);assertThat(result.total()).isEqualByComparingTo("12.50");assertThat(result.lines()).singleElement().extracting(RatingLine::quantity).isEqualTo(new BigDecimal("1250"));}
+}

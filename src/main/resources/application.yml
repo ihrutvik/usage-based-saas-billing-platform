@@ -1,0 +1,35 @@
+spring:
+  application.name: usage-based-saas-billing-platform
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/billing}
+    username: ${DB_USER:billing}
+    password: ${DB_PASSWORD:billing}
+  jpa:
+    open-in-view: false
+    hibernate.ddl-auto: validate
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      properties:
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 5
+    consumer:
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+      properties:
+        isolation.level: read_committed
+    listener:
+      ack-mode: manual_immediate
+  data.redis.host: ${REDIS_HOST:localhost}
+billing.ingestion:
+  max-age: ${USAGE_MAX_AGE:P7D}
+  future-skew: ${USAGE_FUTURE_SKEW:PT5M}
+billing.outbox:
+  topic: ${USAGE_TOPIC:billing.usage-recorded.v1}
+  batch-size: ${OUTBOX_BATCH_SIZE:100}
+  poll-delay: ${OUTBOX_POLL_DELAY:1000}
+  lease-duration: ${OUTBOX_LEASE_DURATION:PT30S}
+  send-timeout: ${OUTBOX_SEND_TIMEOUT:PT5S}
+billing.metering.group-id: ${METERING_GROUP_ID:billing-metering-v1}
+management.endpoints.web.exposure.include: health,info,prometheus

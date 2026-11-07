@@ -1,0 +1,4 @@
+package dev.hrutvik.billing.credit;
+import jakarta.validation.Valid; import org.springframework.http.*; import org.springframework.web.bind.annotation.*; import java.util.UUID;
+@RestController @RequestMapping("/v1/invoices/{invoiceId}/credits")
+public class CreditController {private final CreditService service;public CreditController(CreditService service){this.service=service;}@PostMapping public ResponseEntity<CreditResponse> issue(@RequestHeader("X-Tenant-Id") String tenantId,@RequestHeader("Idempotency-Key") String key,@PathVariable UUID invoiceId,@Valid @RequestBody CreditRequest request){if(key.isBlank()||key.length()>120)throw new IllegalArgumentException("invalid Idempotency-Key");var result=service.issue(tenantId.trim(),invoiceId,key.trim(),request);return ResponseEntity.status(result.replayed()?HttpStatus.OK:HttpStatus.CREATED).body(result);}}

@@ -1,0 +1,10 @@
+package dev.hrutvik.billing.rating;
+import org.springframework.jdbc.core.JdbcTemplate; import org.springframework.stereotype.Repository; import java.math.BigDecimal; import java.time.Instant; import java.util.*;
+@Repository
+public class RatingStore {
+ private final JdbcTemplate jdbc; public RatingStore(JdbcTemplate jdbc){this.jdbc=jdbc;}
+ public SubscriptionPlan subscription(String tenantId,UUID subscriptionId){return jdbc.query("""SELECT s.id,s.plan_id,p.currency FROM subscriptions s JOIN billing_plans p ON p.id=s.plan_id AND p.tenant_id=s.tenant_id WHERE s.id=? AND s.tenant_id=? AND s.status='ACTIVE'""",(rs,n)->new SubscriptionPlan(rs.getObject("id",UUID.class),rs.getObject("plan_id",UUID.class),rs.getString("currency")),subscriptionId,tenantId).stream().findFirst().orElseThrow(()->new IllegalArgumentException("active subscription not found"));}
+ public List<MeterPrice> prices(UUID planId){var rows=jdbc.query("""SELECT m.id,m.meter_key,mp.tier_start,mp.tier_end,mp.unit_price FROM meter_prices mp JOIN billing_meters m ON m.id=mp.meter_id WHERE mp.plan_id=? ORDER BY m.meter_key,mp.tier_start""",(rs,n)->new PriceRow(rs.getObject("id",UUID.class),rs.getString("meter_key"),rs.getBigDecimal("tier_start"),rs.getBigDecimal("tier_end"),rs.getBigDecimal("unit_price")),planId);var grouped=new LinkedHashMap<String,List<PriceRow>>();rows.forEach(r->grouped.computeIfAbsent(r.meterKey(),k->new ArrayList<>()).add(r));return grouped.values().stream().map(v->new MeterPrice(v.get(0).meterId(),v.get(0).meterKey(),v.stream().map(r->new PriceTier(r.start(),r.end(),r.price())).toList())).toList();}
+ public BigDecimal quantity(String tenantId,UUID subscriptionId,String meterKey,Instant from,Instant to){return jdbc.queryForObject("""SELECT COALESCE(SUM(quantity),0) FROM subscription_usage_hourly_buckets WHERE tenant_id=? AND subscription_id=? AND meter_key=? AND bucket_start>=? AND bucket_start<?""",BigDecimal.class,tenantId,subscriptionId,meterKey,from,to);}
+ private record PriceRow(UUID meterId,String meterKey,BigDecimal start,BigDecimal end,BigDecimal price){}
+}

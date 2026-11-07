@@ -1,0 +1,4 @@
+package dev.hrutvik.billing.invoice;
+import org.springframework.format.annotation.DateTimeFormat; import org.springframework.http.*; import org.springframework.web.bind.annotation.*; import java.time.Instant; import java.util.UUID;
+@RestController @RequestMapping("/v1/invoices")
+public class InvoiceController {private final InvoiceService service;public InvoiceController(InvoiceService service){this.service=service;}@PostMapping("/finalize") public ResponseEntity<InvoiceResponse> finalizePeriod(@RequestHeader("X-Tenant-Id") String tenantId,@RequestParam UUID subscriptionId,@RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE_TIME) Instant from,@RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE_TIME) Instant to){var result=service.finalizePeriod(tenantId.trim(),subscriptionId,from,to);return ResponseEntity.status(result.replayed()?HttpStatus.OK:HttpStatus.CREATED).body(result);}}

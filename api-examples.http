@@ -1,0 +1,42 @@
+### Record usage (201); exact replay returns 200
+POST http://localhost:8080/v1/usage-events
+X-Tenant-Id: demo-tenant
+Content-Type: application/json
+
+{
+  "eventId": "evt-20261101-0001",
+  "subscriptionId": "40000000-0000-0000-0000-000000000001",
+  "meterKey": "api_calls",
+  "quantity": 125,
+  "occurredAt": "2026-11-01T10:00:00Z",
+  "attributes": {"region": "ap-south-1", "plan": "growth"}
+}
+
+### Preview graduated usage charges for the seeded subscription
+GET http://localhost:8080/v1/rating-previews?subscriptionId=40000000-0000-0000-0000-000000000001&from=2026-11-01T00:00:00Z&to=2026-12-01T00:00:00Z
+X-Tenant-Id: demo-tenant
+
+### Finalize an invoice; exact period replay returns 200 and the original invoice
+POST http://localhost:8080/v1/invoices/finalize?subscriptionId=40000000-0000-0000-0000-000000000001&from=2026-11-01T00:00:00Z&to=2026-12-01T00:00:00Z
+X-Tenant-Id: demo-tenant
+
+### Issue a partial credit against a finalized invoice
+POST http://localhost:8080/v1/invoices/{{invoiceId}}/credits
+X-Tenant-Id: demo-tenant
+Idempotency-Key: credit-service-outage-20261106
+Content-Type: application/json
+
+{
+  "amount": 5.00,
+  "reason": "Service-level adjustment"
+}
+
+### Inspect relay health and metrics
+GET http://localhost:8080/actuator/health
+
+### Prometheus endpoint
+GET http://localhost:8080/actuator/prometheus
+
+### Read event-time metered usage (upper bound is exclusive)
+GET http://localhost:8080/v1/usage-summary?subscriptionId=40000000-0000-0000-0000-000000000001&meterKey=api_calls&from=2026-11-01T00:00:00Z&to=2026-12-01T00:00:00Z
+X-Tenant-Id: demo-tenant

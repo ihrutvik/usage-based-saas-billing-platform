@@ -1,0 +1,8 @@
+CREATE TABLE billing_meters (id UUID PRIMARY KEY, tenant_id VARCHAR(80) NOT NULL, meter_key VARCHAR(80) NOT NULL, unit VARCHAR(40) NOT NULL, aggregation VARCHAR(20) NOT NULL DEFAULT 'SUM', active BOOLEAN NOT NULL DEFAULT TRUE, UNIQUE(tenant_id,meter_key));
+CREATE TABLE billing_plans (id UUID PRIMARY KEY, tenant_id VARCHAR(80) NOT NULL, plan_key VARCHAR(80) NOT NULL, name VARCHAR(160) NOT NULL, currency CHAR(3) NOT NULL, active BOOLEAN NOT NULL DEFAULT TRUE, UNIQUE(tenant_id,plan_key));
+CREATE TABLE meter_prices (id UUID PRIMARY KEY, plan_id UUID NOT NULL REFERENCES billing_plans(id), meter_id UUID NOT NULL REFERENCES billing_meters(id), tier_start NUMERIC(24,8) NOT NULL, tier_end NUMERIC(24,8), unit_price NUMERIC(19,8) NOT NULL, CHECK(tier_start >= 0), CHECK(tier_end IS NULL OR tier_end > tier_start), CHECK(unit_price >= 0));
+CREATE INDEX idx_meter_prices_lookup ON meter_prices(plan_id,meter_id,tier_start);
+CREATE TABLE usage_events (id UUID PRIMARY KEY, tenant_id VARCHAR(80) NOT NULL, external_event_id VARCHAR(120) NOT NULL, event_fingerprint CHAR(64) NOT NULL, meter_key VARCHAR(80) NOT NULL, quantity NUMERIC(24,8) NOT NULL CHECK(quantity > 0), occurred_at TIMESTAMPTZ NOT NULL, received_at TIMESTAMPTZ NOT NULL, attributes_json TEXT NOT NULL, UNIQUE(tenant_id,external_event_id));
+CREATE INDEX idx_usage_meter_time ON usage_events(tenant_id,meter_key,occurred_at);
+CREATE TABLE outbox_events (id UUID PRIMARY KEY, aggregate_id UUID NOT NULL, event_type VARCHAR(80) NOT NULL, tenant_id VARCHAR(80) NOT NULL, payload TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL, published_at TIMESTAMPTZ);
+CREATE INDEX idx_outbox_unpublished ON outbox_events(created_at) WHERE published_at IS NULL;
