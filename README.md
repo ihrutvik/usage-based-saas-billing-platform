@@ -1,0 +1,68 @@
+# Usage-Based SaaS Billing Platform
+
+A production-minded Java 17 backend for ingesting, aggregating, rating, and invoicing high-volume SaaS usage. This project focuses on the correctness problems behind billing—tenant isolation, idempotency, immutable ledgers, decimal arithmetic, late events, auditable pricing, and reliable event publication—not a checkout UI.
+
+## Current checkpoint
+
+- Tenant-scoped append-only usage ledger
+- Subscription-scoped usage attribution from ingestion through invoicing
+- Cross-tenant subscription ownership validation at the API and database layers
+- Canonical SHA-256 payload fingerprints
+- Exact idempotent replay and `409` conflict behavior
+- Active-meter validation and bounded event-time window
+- Meter, plan, and graduated price-tier schema
+- Transactional `USAGE_RECORDED` outbox
+- PostgreSQL `FOR UPDATE SKIP LOCKED` leasing for horizontally scaled relay workers
+- At-least-once Kafka publication with stable keys and traceable event headers
+- Broker-failure recovery through explicit lease release and expiry
+- Durable Kafka inbox deduplication
+- Atomic inbox and subscription/hourly event-time aggregation
+- Concurrent-safe PostgreSQL bucket upserts
+- Tenant-and-subscription-scoped usage-summary API
+- Active subscription and plan resolution
+- Deterministic graduated-tier pricing with `BigDecimal`
+- Multi-meter rating previews with explicit currency rounding
+- Serialized, idempotent billing-period finalization
+- Immutable invoices and invoice lines
+- Full pricing-tier snapshots for financial auditability
+- Transactional `INVOICE_FINALIZED` outbox events
+- Idempotent partial credit notes for finalized invoices
+- PostgreSQL invoice locking that prevents concurrent over-crediting
+- Payload fingerprints detecting conflicting idempotency-key reuse
+- Transactional `CREDIT_NOTE_ISSUED` events on a dedicated Kafka topic
+- PostgreSQL indexes for meter/time aggregation
+- Unit tests for normalization, replay, conflict, and stale events
+- Docker Compose for PostgreSQL 16, Kafka, and Redis
+- Non-root production container and GitHub Actions verification
+
+## Architecture
+
+```mermaid
+flowchart TD
+  Client["Tenant service"] --> API["Usage ingestion API"]
+  API --> DB[("PostgreSQL ledger")]
+  API --> OB["Transactional outbox"]
+  OB --> R["Leased outbox relay"]
+  R --> K["Kafka"]
+  K --> A["Aggregation and rating"]
+  A --> I["Invoice lifecycle"]
+```
+
+The first checkpoint implements the solid-outline ingestion boundary. See [architecture decisions](docs/architecture.md) for trade-offs and the staged roadmap.
+
+## Run locally
+
+```bash
+docker compose up -d
+mvn spring-boot:run -Dspring-boot.run.profiles=local
+```
+
+The `local` profile enables an isolated demo-catalog migration; production migrations contain no tenant or pricing seed data. Use `api-examples.http` to record usage for the local demo subscription and `demo-tenant/api_calls` meter. Every event must identify an active subscription owned by the tenant. A new event returns `201`; an identical retry returns the original event with `replayed: true`; changed subscription or payload under the same event ID returns `409`.
+
+## Engineering signals for recruiters
+
+This repository demonstrates financial-domain modeling, subscription isolation, graduated usage pricing, deterministic decimal arithmetic, event-driven consistency, database constraints, deterministic idempotency, replay-safe consumers, safe concurrent workers, explicit failure semantics, and an architecture designed to evolve from one service into independently scalable ingestion, rating, and invoicing workers.
+
+## Originality
+
+This is an original portfolio implementation based on public distributed-systems patterns. It contains no proprietary GoDaddy or Airtel code.
