@@ -40,3 +40,16 @@ GET http://localhost:8080/actuator/prometheus
 ### Read event-time metered usage (upper bound is exclusive)
 GET http://localhost:8080/v1/usage-summary?subscriptionId=40000000-0000-0000-0000-000000000001&meterKey=api_calls&from=2026-11-01T00:00:00Z&to=2026-12-01T00:00:00Z
 X-Tenant-Id: demo-tenant
+
+### Review usage detected after an invoice was finalized
+GET http://localhost:8080/v1/billing-adjustments?subscriptionId=40000000-0000-0000-0000-000000000001&status=PENDING
+X-Tenant-Id: demo-tenant
+
+### Explicitly waive a pending late-usage adjustment
+POST http://localhost:8080/v1/billing-adjustments/{{adjustmentId}}/waive
+X-Tenant-Id: demo-tenant
+Content-Type: application/json
+
+{
+  "reason": "Usage arrived after the contractual adjustment window"
+}

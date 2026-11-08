@@ -53,6 +53,12 @@ Finalized invoices are never edited. A correction creates an immutable credit no
 
 Credit creation uses a tenant-scoped idempotency key plus a canonical SHA-256 request fingerprint. Exact retries return the original credit note, while reusing the key with a different invoice, amount, or reason returns `409`. The credit record and destination-aware `CREDIT_NOTE_ISSUED` outbox event commit atomically; downstream accounting integrations consume `billing.credit-note-issued.v1` independently of usage and invoice streams.
 
+## Late-arriving usage adjustments
+
+An event is late for billing when its `occurredAt` belongs to a finalized invoice period and its ledger `receivedAt` is later than that invoice's `finalizedAt`. Metering still adds the event to the subscription projection, but it never reopens or mutates the finalized invoice. Within the same inbox transaction, it creates a unique `PENDING` adjustment tied to the immutable usage event and invoice.
+
+The uniqueness constraint on `usage_event_id` and the metering inbox make duplicate Kafka delivery harmless. The adjustment and destination-aware `LATE_USAGE_DETECTED` outbox event commit atomically. Operators can list the tenant-and-subscription-scoped queue and waive an item only after locking its pending row; the reason, resolution time, and `LATE_USAGE_WAIVED` event form an audit trail. Converting candidates into debit notes is deliberately separate so commercial policy does not leak into ingestion.
+
 ## Planned 14-run evolution
 
 Kafka relay and aggregation, graduated/volume rating, subscriptions and billing periods, invoice finalization, credits, late-arrival adjustments, Redis-based real-time counters, security, Testcontainers, OpenTelemetry, AWS Terraform, load tests, and SLO dashboards.

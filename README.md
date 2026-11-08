@@ -30,6 +30,10 @@ A production-minded Java 17 backend for ingesting, aggregating, rating, and invo
 - PostgreSQL invoice locking that prevents concurrent over-crediting
 - Payload fingerprints detecting conflicting idempotency-key reuse
 - Transactional `CREDIT_NOTE_ISSUED` events on a dedicated Kafka topic
+- Automatic detection of usage received after invoice finalization
+- Immutable late-usage adjustment review queue
+- Idempotent adjustment creation and transactional detection events
+- Tenant-scoped listing and auditable waiver workflow
 - PostgreSQL indexes for meter/time aggregation
 - Unit tests for normalization, replay, conflict, and stale events
 - Docker Compose for PostgreSQL 16, Kafka, and Redis
@@ -62,6 +66,8 @@ The `local` profile enables an isolated demo-catalog migration; production migra
 ## Engineering signals for recruiters
 
 This repository demonstrates financial-domain modeling, subscription isolation, graduated usage pricing, deterministic decimal arithmetic, event-driven consistency, database constraints, deterministic idempotency, replay-safe consumers, safe concurrent workers, explicit failure semantics, and an architecture designed to evolve from one service into independently scalable ingestion, rating, and invoicing workers.
+
+Late usage never rewrites a finalized invoice. Instead, the metering transaction creates one immutable adjustment candidate per usage event and emits `LATE_USAGE_DETECTED`. Operators can review pending adjustments and explicitly waive them with a recorded reason; a later milestone will convert approved candidates into debit adjustments.
 
 ## Originality
 
