@@ -30,7 +30,8 @@ class RealtimeUsageProjectionTest {
     @Test void failsClosedSoKafkaCanRetry() {
         var events=mock(UsageEventRepository.class); var redis=mock(StringRedisTemplate.class); var id=UUID.randomUUID();
         when(events.findById(id)).thenReturn(Optional.of(new UsageEvent(id,"t",UUID.randomUUID(),"e","f","m",BigDecimal.ONE,Instant.now(),Instant.now(),"{}")));
-        when(redis.execute(any(),anyList(),any(String[].class))).thenThrow(new RuntimeException("redis down"));
+        doThrow(new RuntimeException("redis down")).when(redis)
+                .execute(any(),anyList(),anyString(),anyString(),anyString());
         assertThrows(RealtimeUsageUnavailable.class,()->new RealtimeUsageProjection(events,redis,new RealtimeUsageKey(),new SimpleMeterRegistry(),Duration.ofDays(1),Duration.ofDays(1),false).record(id));
     }
 
