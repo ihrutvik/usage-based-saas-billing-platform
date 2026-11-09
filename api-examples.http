@@ -41,6 +41,10 @@ GET http://localhost:8080/actuator/prometheus
 GET http://localhost:8080/v1/usage-summary?subscriptionId=40000000-0000-0000-0000-000000000001&meterKey=api_calls&from=2026-11-01T00:00:00Z&to=2026-12-01T00:00:00Z
 X-Tenant-Id: demo-tenant
 
+### Read low-latency current-period usage from the Redis projection
+GET http://localhost:8080/v1/realtime-usage?subscriptionId=40000000-0000-0000-0000-000000000001&meterKey=api_calls&period=2026-11
+X-Tenant-Id: demo-tenant
+
 ### Review usage detected after an invoice was finalized
 GET http://localhost:8080/v1/billing-adjustments?subscriptionId=40000000-0000-0000-0000-000000000001&status=PENDING
 X-Tenant-Id: demo-tenant

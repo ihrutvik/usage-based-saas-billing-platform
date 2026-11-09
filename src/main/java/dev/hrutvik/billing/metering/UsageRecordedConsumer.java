@@ -10,7 +10,11 @@ import java.util.UUID;
 @Component
 public class UsageRecordedConsumer {
     private final UsageAggregationService aggregation;
-    public UsageRecordedConsumer(UsageAggregationService aggregation) { this.aggregation = aggregation; }
+    private final RealtimeUsageProjection realtimeUsage;
+    public UsageRecordedConsumer(UsageAggregationService aggregation, RealtimeUsageProjection realtimeUsage) {
+        this.aggregation = aggregation;
+        this.realtimeUsage = realtimeUsage;
+    }
 
     @KafkaListener(topics="${billing.outbox.topic:billing.usage-recorded.v1}", groupId="${billing.metering.group-id:billing-metering-v1}")
     public void consume(ConsumerRecord<String,String> record, Acknowledgment acknowledgment) {
@@ -18,6 +22,7 @@ public class UsageRecordedConsumer {
         if (header == null) throw new IllegalArgumentException("Missing event-id header");
         UUID eventId = UUID.fromString(new String(header.value(), StandardCharsets.UTF_8));
         aggregation.aggregate(eventId, record.topic(), record.partition(), record.offset());
+        realtimeUsage.record(eventId);
         acknowledgment.acknowledge();
     }
 }

@@ -19,6 +19,9 @@ A production-minded Java 17 backend for ingesting, aggregating, rating, and invo
 - Atomic inbox and subscription/hourly event-time aggregation
 - Concurrent-safe PostgreSQL bucket upserts
 - Tenant-and-subscription-scoped usage-summary API
+- Redis-backed current-period usage projection with atomic Lua deduplication
+- Fail-closed Kafka/Redis delivery by default, with an explicit degraded-mode switch
+- Low-latency tenant-scoped real-time usage API and projection metrics
 - Active subscription and plan resolution
 - Deterministic graduated-tier pricing with `BigDecimal`
 - Multi-meter rating previews with explicit currency rounding
@@ -66,6 +69,8 @@ The `local` profile enables an isolated demo-catalog migration; production migra
 ## Engineering signals for recruiters
 
 This repository demonstrates financial-domain modeling, subscription isolation, graduated usage pricing, deterministic decimal arithmetic, event-driven consistency, database constraints, deterministic idempotency, replay-safe consumers, safe concurrent workers, explicit failure semantics, and an architecture designed to evolve from one service into independently scalable ingestion, rating, and invoicing workers.
+
+PostgreSQL remains the billing source of truth. After the durable hourly projection commits, the Kafka consumer applies the same event to Redis through one Lua script that atomically claims the event ID and increments the current-period counter. The offset is acknowledged only afterward, so the default fail-closed policy safely retries Redis outages without double counting. `REALTIME_USAGE_FAIL_OPEN=true` is available for deployments that prefer Kafka availability and accept a rebuildable cache gap.
 
 Late usage never rewrites a finalized invoice. Instead, the metering transaction creates one immutable adjustment candidate per usage event and emits `LATE_USAGE_DETECTED`. Operators can review pending adjustments and explicitly waive them with a recorded reason; a later milestone will convert approved candidates into debit adjustments.
 

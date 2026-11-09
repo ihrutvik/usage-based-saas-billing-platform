@@ -32,4 +32,8 @@ billing.outbox:
   lease-duration: ${OUTBOX_LEASE_DURATION:PT30S}
   send-timeout: ${OUTBOX_SEND_TIMEOUT:PT5S}
 billing.metering.group-id: ${METERING_GROUP_ID:billing-metering-v1}
+billing.realtime-usage:
+  event-ttl: ${REALTIME_USAGE_EVENT_TTL:P120D}
+  counter-ttl: ${REALTIME_USAGE_COUNTER_TTL:P120D}
+  fail-open: ${REALTIME_USAGE_FAIL_OPEN:false}
 management.endpoints.web.exposure.include: health,info,prometheus

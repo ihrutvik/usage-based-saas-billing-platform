@@ -59,6 +59,14 @@ An event is late for billing when its `occurredAt` belongs to a finalized invoic
 
 The uniqueness constraint on `usage_event_id` and the metering inbox make duplicate Kafka delivery harmless. The adjustment and destination-aware `LATE_USAGE_DETECTED` outbox event commit atomically. Operators can list the tenant-and-subscription-scoped queue and waive an item only after locking its pending row; the reason, resolution time, and `LATE_USAGE_WAIVED` event form an audit trail. Converting candidates into debit notes is deliberately separate so commercial policy does not leak into ingestion.
 
+## Redis real-time usage projection
+
+The PostgreSQL ledger and hourly buckets remain authoritative for rating and invoicing. Redis is a rebuildable, current-period read model for dashboards and usage warnings. After PostgreSQL aggregation commits, the Kafka consumer runs a Lua script that uses `SET NX EX` on the immutable event ID and `INCRBYFLOAT` on the tenant, subscription, meter, and UTC month counter. Both operations execute atomically, so broker redelivery cannot inflate usage.
+
+The consumer acknowledges Kafka only after the Redis script succeeds. The default fail-closed policy converts a Redis failure into Kafka redelivery; because both the PostgreSQL inbox and Redis event key are idempotent, either projection can safely have succeeded before the retry. Operators may set `REALTIME_USAGE_FAIL_OPEN=true` when ingestion availability matters more than a temporary cache gap. That mode is observable through `billing.realtime_usage.events{outcome="degraded"}` and requires rebuilding affected counters from the immutable ledger.
+
+Redis keys encode tenant and meter segments with URL-safe Base64, avoiding ambiguous delimiters while keeping the subscription and month visible. Event and counter TTLs default to 120 days and are independently configurable. The API returns `503` when Redis is unavailable rather than silently falling back to a potentially expensive database aggregation.
+
 ## Planned 14-run evolution
 
 Kafka relay and aggregation, graduated/volume rating, subscriptions and billing periods, invoice finalization, credits, late-arrival adjustments, Redis-based real-time counters, security, Testcontainers, OpenTelemetry, AWS Terraform, load tests, and SLO dashboards.
