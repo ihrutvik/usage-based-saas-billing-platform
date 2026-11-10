@@ -67,6 +67,14 @@ The consumer acknowledges Kafka only after the Redis script succeeds. The defaul
 
 Redis keys encode tenant and meter segments with URL-safe Base64, avoiding ambiguous delimiters while keeping the subscription and month visible. Event and counter TTLs default to 120 days and are independently configurable. The API returns `503` when Redis is unavailable rather than silently falling back to a potentially expensive database aggregation.
 
+## API credentials and tenant isolation
+
+Every `/v1/*` request carries `X-API-Key: bk_<key-id>.<secret>`. The key ID is non-secret and enables an indexed PostgreSQL lookup. Only the SHA-256 digest of the secret is stored; the filter hashes the presented secret and compares bytes with `MessageDigest.isEqual`. Credentials have explicit activation, expiry, tenant, and scopes, so rotation means inserting a new key and later revoking the old one without changing application code.
+
+Authentication runs before controllers and wraps the request with the credential's tenant ID. A caller-supplied `X-Tenant-Id` is therefore overwritten, preventing cross-tenant access through header spoofing while keeping the existing service interfaces focused on tenant-scoped domain operations. Route-level policies separate usage ingestion, usage reads, billing reads, and billing writes. Authentication failures return `401`; valid credentials lacking the required scope return `403` without revealing credential details.
+
+The credential's `last_used_at` audit field is updated only after authentication and authorization succeed. Production deployments should protect actuator endpoints independently at the load balancer or service mesh, and should provision secrets through a secrets manager rather than migrations. The local profile alone seeds a documented demo key.
+
 ## Planned 14-run evolution
 
 Kafka relay and aggregation, graduated/volume rating, subscriptions and billing periods, invoice finalization, credits, late-arrival adjustments, Redis-based real-time counters, security, Testcontainers, OpenTelemetry, AWS Terraform, load tests, and SLO dashboards.
