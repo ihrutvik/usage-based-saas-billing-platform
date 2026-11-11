@@ -12,6 +12,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import java.time.Instant;
+import java.sql.Timestamp;
 import java.util.Set;
 import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -47,7 +48,7 @@ class PostgresSecurityIntegrationTest {
         assertThat(credential.scopes()).isEqualTo(Set.of("usage:read", "billing:write"));
         Instant usedAt = Instant.parse("2026-11-11T12:30:00Z");
         store.recordUse(credentialId, usedAt);
-        assertThat(jdbc.queryForObject("SELECT last_used_at FROM api_credentials WHERE id=?", Instant.class, credentialId)).isEqualTo(usedAt);
+        assertThat(jdbc.queryForObject("SELECT last_used_at FROM api_credentials WHERE id=?", Timestamp.class, credentialId).toInstant()).isEqualTo(usedAt);
     }
 
     @Test void databaseRejectsCrossTenantUsageAttribution() {
@@ -58,7 +59,7 @@ class PostgresSecurityIntegrationTest {
                 INSERT INTO usage_events(id,tenant_id,subscription_id,external_event_id,event_fingerprint,meter_key,quantity,occurred_at,received_at,attributes_json)
                 VALUES (?,?,?,?,?,?,?,?,?,?)
                 """, UUID.randomUUID(), "tenant-b", subscription, "evt-cross-tenant", "a".repeat(64),
-                "api_calls", 1, Instant.now(), Instant.now(), "{}"))
+                "api_calls", 1, Timestamp.from(Instant.now()), Timestamp.from(Instant.now()), "{}"))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 }

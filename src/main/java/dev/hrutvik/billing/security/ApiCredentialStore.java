@@ -27,6 +27,6 @@ public class ApiCredentialStore {
     }
 
     public void recordUse(java.util.UUID credentialId, Instant usedAt) {
-        jdbc.update("UPDATE api_credentials SET last_used_at=? WHERE id=?", usedAt, credentialId);
+        jdbc.update("UPDATE api_credentials SET last_used_at=? WHERE id=?", Timestamp.from(usedAt), credentialId);
     }
 }
