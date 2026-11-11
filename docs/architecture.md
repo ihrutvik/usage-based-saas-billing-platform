@@ -75,6 +75,12 @@ Authentication runs before controllers and wraps the request with the credential
 
 The credential's `last_used_at` audit field is updated only after authentication and authorization succeed. Production deployments should protect actuator endpoints independently at the load balancer or service mesh, and should provision secrets through a secrets manager rather than migrations. The local profile alone seeds a documented demo key.
 
+## Database integration verification
+
+CI provisions PostgreSQL 16 with Testcontainers and runs the exact production Flyway locations. The suite verifies that every migration succeeds without local demo data, PostgreSQL array scopes round-trip through the credential repository, usage timestamps retain time-zone fidelity, and the composite subscription/tenant foreign key rejects cross-tenant ledger attribution.
+
+This deliberately avoids H2 for persistence tests. The platform depends on PostgreSQL-specific partial indexes, arrays, `TIMESTAMPTZ`, `SKIP LOCKED`, `NUMERIC`, and composite constraints; substituting a different SQL engine would provide faster but misleading assurance. Unit tests still cover domain branches quickly, while the container suite protects database contracts in the repository pipeline.
+
 ## Planned 14-run evolution
 
 Kafka relay and aggregation, graduated/volume rating, subscriptions and billing periods, invoice finalization, credits, late-arrival adjustments, Redis-based real-time counters, security, Testcontainers, OpenTelemetry, AWS Terraform, load tests, and SLO dashboards.

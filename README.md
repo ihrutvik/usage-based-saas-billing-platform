@@ -25,6 +25,8 @@ A production-minded Java 17 backend for ingesting, aggregating, rating, and invo
 - Database-backed API keys with public lookup IDs and SHA-256 secret digests
 - Constant-time credential verification, expiry, revocation, and least-privilege scopes
 - Server-derived tenant identity that overrides spoofed tenant headers
+- PostgreSQL 16 Testcontainers coverage for the full Flyway migration chain
+- Database-level credential, audit, and cross-tenant constraint verification
 - Active subscription and plan resolution
 - Deterministic graduated-tier pricing with `BigDecimal`
 - Multi-meter rating previews with explicit currency rounding
@@ -74,6 +76,8 @@ The `local` profile enables an isolated demo-catalog migration; production migra
 This repository demonstrates financial-domain modeling, subscription isolation, graduated usage pricing, deterministic decimal arithmetic, event-driven consistency, database constraints, deterministic idempotency, replay-safe consumers, safe concurrent workers, explicit failure semantics, and an architecture designed to evolve from one service into independently scalable ingestion, rating, and invoicing workers.
 
 API credentials use the format `bk_<key-id>.<secret>`. The public key ID supports an indexed lookup; only the SHA-256 secret digest is persisted, and verification uses a constant-time comparison. Credentials can be revoked or expired and carry independent `usage:read`, `usage:write`, `billing:read`, and `billing:write` scopes. Actuator endpoints stay outside this application-key boundary so infrastructure authentication can be configured separately at the ingress.
+
+The CI suite starts a real PostgreSQL 16 container, applies the complete production Flyway chain, and verifies credential arrays, audit timestamps, and composite tenant foreign keys. These tests complement fast unit coverage and catch PostgreSQL-specific behavior that an in-memory substitute would miss.
 
 PostgreSQL remains the billing source of truth. After the durable hourly projection commits, the Kafka consumer applies the same event to Redis through one Lua script that atomically claims the event ID and increments the current-period counter. The offset is acknowledged only afterward, so the default fail-closed policy safely retries Redis outages without double counting. `REALTIME_USAGE_FAIL_OPEN=true` is available for deployments that prefer Kafka availability and accept a rebuildable cache gap.
 
