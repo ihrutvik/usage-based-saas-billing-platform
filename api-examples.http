@@ -2,6 +2,7 @@
 POST http://localhost:8080/v1/usage-events
 X-API-Key: bk_demo.demo-secret
 X-Tenant-Id: demo-tenant
+X-Correlation-Id: usage-import-20261112
 Content-Type: application/json
 
 {
@@ -12,6 +13,9 @@ Content-Type: application/json
   "occurredAt": "2026-11-01T10:00:00Z",
   "attributes": {"region": "ap-south-1", "plan": "growth"}
 }
+
+### The response echoes the safe X-Correlation-Id; inspect the request trace in Jaeger
+GET http://localhost:16686
 
 ### Preview graduated usage charges for the seeded subscription
 GET http://localhost:8080/v1/rating-previews?subscriptionId=40000000-0000-0000-0000-000000000001&from=2026-11-01T00:00:00Z&to=2026-12-01T00:00:00Z

@@ -81,6 +81,14 @@ CI provisions PostgreSQL 16 with Testcontainers and runs the exact production Fl
 
 This deliberately avoids H2 for persistence tests. The platform depends on PostgreSQL-specific partial indexes, arrays, `TIMESTAMPTZ`, `SKIP LOCKED`, `NUMERIC`, and composite constraints; substituting a different SQL engine would provide faster but misleading assurance. Unit tests still cover domain branches quickly, while the container suite protects database contracts in the repository pipeline.
 
+## Distributed tracing and correlation
+
+Spring Boot observations create HTTP server spans and Micrometer-enabled Kafka template and listener spans. The OpenTelemetry bridge exports them through OTLP/HTTP, so production can target a managed collector while Docker Compose provides a local Jaeger all-in-one instance. Sampling defaults to 10% to control telemetry volume and is configurable without rebuilding the application.
+
+Trace and span IDs are added to structured log context. `X-Correlation-Id` remains a separate operator-facing identifier: the edge filter preserves a caller value only when it matches a strict 64-character allowlist, otherwise it generates a UUID, returns it on the response, and clears MDC after the request. This prevents header injection and context leakage across reused servlet threads while allowing support tickets and batch jobs to correlate sampled and unsampled requests.
+
+Kafka propagation uses the framework's observation support rather than hand-written tracing headers. That keeps W3C trace-context propagation aligned with the tracing bridge and preserves parent/child relationships from an API call through outbox publication and downstream listeners. Billing event IDs remain the durable business correlation key; traces are diagnostic data and never participate in financial correctness.
+
 ## Planned 14-run evolution
 
 Kafka relay and aggregation, graduated/volume rating, subscriptions and billing periods, invoice finalization, credits, late-arrival adjustments, Redis-based real-time counters, security, Testcontainers, OpenTelemetry, AWS Terraform, load tests, and SLO dashboards.
