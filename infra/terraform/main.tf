@@ -178,7 +178,13 @@ resource "aws_msk_serverless_cluster" "billing" {
     subnet_ids         = aws_subnet.private[*].id
     security_group_ids = [aws_security_group.data.id]
   }
-  client_authentication { sasl { iam { enabled = true } } }
+  client_authentication {
+    sasl {
+      iam {
+        enabled = true
+      }
+    }
+  }
 }
 
 resource "aws_ecr_repository" "app" {
