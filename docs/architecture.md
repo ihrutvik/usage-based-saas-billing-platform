@@ -89,6 +89,14 @@ Trace and span IDs are added to structured log context. `X-Correlation-Id` remai
 
 Kafka propagation uses the framework's observation support rather than hand-written tracing headers. That keeps W3C trace-context propagation aligned with the tracing bridge and preserves parent/child relationships from an API call through outbox publication and downstream listeners. Billing event IDs remain the durable business correlation key; traces are diagnostic data and never participate in financial correctness.
 
+## AWS deployment boundary
+
+The Terraform stack places an Application Load Balancer in two public subnets and ECS Fargate tasks in two private subnets. PostgreSQL, Redis, and MSK Serverless have no public route and accept traffic only from the application security group. One NAT gateway is a deliberate portfolio-cost trade-off; a higher-availability production account should use one NAT per Availability Zone or private VPC endpoints for ECR, CloudWatch, Secrets Manager, and S3.
+
+RDS PostgreSQL is encrypted, multi-AZ, deletion-protected, backed up for 14 days, and owns its master credential through Secrets Manager. ElastiCache uses TLS, at-rest encryption, authentication, replication, and automatic failover. ECS receives both secrets through task-definition secret references rather than plain environment values. Terraform state is still sensitive because it generates the Redis credential, so the deployment guide requires encrypted, locked, access-controlled remote state.
+
+MSK Serverless uses SASL/IAM. The application includes AWS's IAM authentication library, while the task role receives cluster, topic, and consumer-group permissions scoped to this stack. ECS deployment circuit breaking rolls back unhealthy releases, target tracking scales between two and ten tasks, and CloudWatch alarms publish excessive CPU or target 5xx signals to an SNS topic.
+
 ## Planned 14-run evolution
 
 Kafka relay and aggregation, graduated/volume rating, subscriptions and billing periods, invoice finalization, credits, late-arrival adjustments, Redis-based real-time counters, security, Testcontainers, OpenTelemetry, AWS Terraform, load tests, and SLO dashboards.

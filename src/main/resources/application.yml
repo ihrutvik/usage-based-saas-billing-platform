@@ -24,7 +24,11 @@ spring:
       observation-enabled: true
     template:
       observation-enabled: true
-  data.redis.host: ${REDIS_HOST:localhost}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      password: ${REDIS_PASSWORD:}
+      ssl.enabled: ${REDIS_SSL:false}
 billing.ingestion:
   max-age: ${USAGE_MAX_AGE:P7D}
   future-skew: ${USAGE_FUTURE_SKEW:PT5M}

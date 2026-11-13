@@ -30,6 +30,8 @@ A production-minded Java 17 backend for ingesting, aggregating, rating, and invo
 - OpenTelemetry HTTP and Kafka tracing with configurable sampling
 - OTLP export, trace-aware logs, and sanitized correlation-ID propagation
 - Local Jaeger trace exploration through Docker Compose
+- AWS deployment foundation with private ECS Fargate tasks, multi-AZ RDS, MSK Serverless, and ElastiCache
+- IAM-authenticated Kafka, Secrets Manager injection, autoscaling, rollback, and CloudWatch alarms
 - Active subscription and plan resolution
 - Deterministic graduated-tier pricing with `BigDecimal`
 - Multi-meter rating previews with explicit currency rounding
@@ -64,6 +66,8 @@ flowchart TD
 ```
 
 The first checkpoint implements the solid-outline ingestion boundary. See [architecture decisions](docs/architecture.md) for trade-offs and the staged roadmap.
+
+The [AWS Terraform stack](infra/terraform/README.md) provides a production-oriented deployment path while keeping local development on Docker Compose.
 
 ## Run locally
 
