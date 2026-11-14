@@ -1,0 +1,21 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "panels": [
+    {"type":"stat","title":"API request rate","id":1,"gridPos":{"h":8,"w":8,"x":0,"y":0},"targets":[{"expr":"sum(rate(http_server_requests_seconds_count{uri=~\"/v1/.*\"}[5m]))","legendFormat":"requests/s"}]},
+    {"type":"stat","title":"5xx ratio","id":2,"gridPos":{"h":8,"w":8,"x":8,"y":0},"fieldConfig":{"defaults":{"unit":"percentunit"}},"targets":[{"expr":"sum(rate(http_server_requests_seconds_count{uri=~\"/v1/.*\",status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_server_requests_seconds_count{uri=~\"/v1/.*\"}[5m])), 0.001)","legendFormat":"error ratio"}]},
+    {"type":"stat","title":"API p95 latency","id":3,"gridPos":{"h":8,"w":8,"x":16,"y":0},"fieldConfig":{"defaults":{"unit":"s"}},"targets":[{"expr":"histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{uri=~\"/v1/.*\"}[5m])))","legendFormat":"p95"}]},
+    {"type":"timeseries","title":"HTTP outcomes","id":4,"gridPos":{"h":9,"w":12,"x":0,"y":8},"targets":[{"expr":"sum by (status) (rate(http_server_requests_seconds_count{uri=~\"/v1/.*\"}[5m]))","legendFormat":"{{status}}"}]},
+    {"type":"timeseries","title":"Real-time projection outcomes","id":5,"gridPos":{"h":9,"w":12,"x":12,"y":8},"targets":[{"expr":"sum by (outcome) (rate(billing_realtime_usage_events_total[5m]))","legendFormat":"{{outcome}}"}]},
+    {"type":"timeseries","title":"JVM heap","id":6,"gridPos":{"h":9,"w":12,"x":0,"y":17},"fieldConfig":{"defaults":{"unit":"bytes"}},"targets":[{"expr":"sum(jvm_memory_used_bytes{area=\"heap\"})","legendFormat":"used"},{"expr":"sum(jvm_memory_max_bytes{area=\"heap\"})","legendFormat":"max"}]},
+    {"type":"timeseries","title":"Database connection pool","id":7,"gridPos":{"h":9,"w":12,"x":12,"y":17},"targets":[{"expr":"hikaricp_connections_active","legendFormat":"active"},{"expr":"hikaricp_connections_pending","legendFormat":"pending"}]}
+  ],
+  "refresh": "10s",
+  "schemaVersion": 41,
+  "tags": ["billing", "slo"],
+  "templating": {"list": []},
+  "time": {"from": "now-1h", "to": "now"},
+  "title": "Usage Billing Overview",
+  "uid": "usage-billing-overview",
+  "version": 1
+}

@@ -2,7 +2,7 @@
 
 A production-minded Java 17 backend for ingesting, aggregating, rating, and invoicing high-volume SaaS usage. This project focuses on the correctness problems behind billing—tenant isolation, idempotency, immutable ledgers, decimal arithmetic, late events, auditable pricing, and reliable event publication—not a checkout UI.
 
-## Current checkpoint
+## What is implemented
 
 - Tenant-scoped append-only usage ledger
 - Subscription-scoped usage attribution from ingestion through invoicing
@@ -50,6 +50,9 @@ A production-minded Java 17 backend for ingesting, aggregating, rating, and invo
 - PostgreSQL indexes for meter/time aggregation
 - Unit tests for normalization, replay, conflict, and stale events
 - Docker Compose for PostgreSQL 16, Kafka, Redis, and Jaeger
+- Provisioned Prometheus and Grafana monitoring
+- Seven production-oriented SLO and dependency alerts
+- k6 load coverage for concurrent ingestion and exact idempotent replay
 - Non-root production container and GitHub Actions verification
 
 ## Architecture
@@ -65,7 +68,7 @@ flowchart TD
   A --> I["Invoice lifecycle"]
 ```
 
-The first checkpoint implements the solid-outline ingestion boundary. See [architecture decisions](docs/architecture.md) for trade-offs and the staged roadmap.
+See [architecture decisions](docs/architecture.md) for the reasoning behind the correctness, consistency, security, and deployment trade-offs.
 
 The [AWS Terraform stack](infra/terraform/README.md) provides a production-oriented deployment path while keeping local development on Docker Compose.
 
@@ -73,10 +76,9 @@ The [AWS Terraform stack](infra/terraform/README.md) provides a production-orien
 
 ```bash
 docker compose up -d
-mvn spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
-Jaeger is available at `http://localhost:16686`. The application exports OTLP/HTTP traces to `http://localhost:4318/v1/traces`, samples 10% by default, and accepts `TRACING_SAMPLING_PROBABILITY` for environment-specific control. Every HTTP response includes a sanitized `X-Correlation-Id`; callers may supply a safe value containing letters, digits, `.`, `_`, or `-` (maximum 64 characters).
+The full stack starts the application and its dependencies. Open the API on `http://localhost:8080`, Jaeger on `http://localhost:16686`, Prometheus on `http://localhost:9090`, and Grafana on `http://localhost:3000` (`admin` / `admin` for local use). The application exports OTLP/HTTP traces to Jaeger, samples 10% by default, and accepts `TRACING_SAMPLING_PROBABILITY` for environment-specific control. Every HTTP response includes a sanitized `X-Correlation-Id`; callers may supply a safe value containing letters, digits, `.`, `_`, or `-` (maximum 64 characters).
 
 The `local` profile enables an isolated demo-catalog migration; production migrations contain no tenant, credential, or pricing seed data. Use API key `bk_demo.demo-secret` with `api-examples.http` to record usage for the local demo subscription and `demo-tenant/api_calls` meter. The filter validates the hashed credential, derives the tenant, and replaces any caller-provided tenant header. Every event must identify an active subscription owned by that tenant. A new event returns `201`; an identical retry returns the original event with `replayed: true`; changed subscription or payload under the same event ID returns `409`.
 
@@ -90,7 +92,23 @@ The CI suite starts a real PostgreSQL 16 container, applies the complete product
 
 PostgreSQL remains the billing source of truth. After the durable hourly projection commits, the Kafka consumer applies the same event to Redis through one Lua script that atomically claims the event ID and increments the current-period counter. The offset is acknowledged only afterward, so the default fail-closed policy safely retries Redis outages without double counting. `REALTIME_USAGE_FAIL_OPEN=true` is available for deployments that prefer Kafka availability and accept a rebuildable cache gap.
 
-Late usage never rewrites a finalized invoice. Instead, the metering transaction creates one immutable adjustment candidate per usage event and emits `LATE_USAGE_DETECTED`. Operators can review pending adjustments and explicitly waive them with a recorded reason; a later milestone will convert approved candidates into debit adjustments.
+Late usage never rewrites a finalized invoice. Instead, the metering transaction creates one immutable adjustment candidate per usage event and emits `LATE_USAGE_DETECTED`. Operators can review pending adjustments and explicitly waive them with a recorded reason, keeping commercial resolution separate from ingestion correctness.
+
+## Performance and operations
+
+Run the ingestion scenario after the stack is healthy:
+
+```bash
+docker run --rm --network host \
+  -v "$PWD/load-tests:/scripts:ro" \
+  grafana/k6:1.1.0 run /scripts/usage-ingestion.js
+```
+
+The scenario ramps to 40 concurrent virtual users, creates a unique usage fact, immediately replays the exact payload, and enforces p95/p99 latency, transport-error, business-failure, and idempotency thresholds. Prometheus loads seven alerts covering availability, latency, ingestion errors, Redis projection health, heap pressure, and scrape health. Grafana provisions the `Usage Billing Overview` dashboard without manual setup. See [the operations guide](docs/operations.md) for SLOs and incident actions.
+
+## Repository launch kit
+
+The concise repository description, recruiter talking points, and ready-to-publish LinkedIn launch post are in [docs/launch.md](docs/launch.md).
 
 ## Originality
 

@@ -13,5 +13,12 @@ jobs:
       - run: mvn -B -ntp verify
       - run: docker compose config --quiet
       - run: docker build -t usage-based-saas-billing-platform:${{ github.sha }} .
+      - name: Validate Prometheus configuration and SLO rules
+        run: |
+          docker run --rm --entrypoint promtool \
+            -v "$PWD/observability:/etc/prometheus:ro" \
+            prom/prometheus:v3.5.0 check config /etc/prometheus/prometheus.yml
+      - name: Validate k6 performance scenario
+        run: docker run --rm -v "$PWD:/work:ro" grafana/k6:1.1.0 inspect /work/load-tests/usage-ingestion.js
       - run: terraform -chdir=infra/terraform init -backend=false
       - run: terraform -chdir=infra/terraform validate

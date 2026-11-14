@@ -97,6 +97,6 @@ RDS PostgreSQL is encrypted, multi-AZ, deletion-protected, backed up for 14 days
 
 MSK Serverless uses SASL/IAM. The application includes AWS's IAM authentication library, while the task role receives cluster, topic, and consumer-group permissions scoped to this stack. ECS deployment circuit breaking rolls back unhealthy releases, target tracking scales between two and ten tasks, and CloudWatch alarms publish excessive CPU or target 5xx signals to an SNS topic.
 
-## Planned 14-run evolution
+## Completed 14-run evolution
 
-Kafka relay and aggregation, graduated/volume rating, subscriptions and billing periods, invoice finalization, credits, late-arrival adjustments, Redis-based real-time counters, security, Testcontainers, OpenTelemetry, AWS Terraform, load tests, and SLO dashboards.
+The completed platform covers Kafka relay and aggregation, graduated rating, subscriptions and billing periods, invoice finalization, credits, late-arrival adjustments, Redis-based real-time counters, security, Testcontainers, OpenTelemetry, AWS Terraform, load tests, and SLO dashboards. The modular package boundaries can be extracted into independently scaled ingestion, metering, and invoice services if traffic or team ownership requires it; the current modular monolith deliberately preserves transactional simplicity while the domain is evolving.

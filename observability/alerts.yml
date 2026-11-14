@@ -1,0 +1,42 @@
+groups:
+  - name: billing-platform-slos
+    rules:
+      - alert: BillingApiAvailabilityBurn
+        expr: |
+          sum(rate(http_server_requests_seconds_count{uri=~"/v1/.*",status=~"5.."}[5m]))
+          / clamp_min(sum(rate(http_server_requests_seconds_count{uri=~"/v1/.*"}[5m])), 0.001) > 0.01
+        for: 5m
+        labels: {severity: critical, slo: availability}
+        annotations: {summary: "Billing API error ratio is above 1%"}
+      - alert: BillingApiLatencyHigh
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(http_server_requests_seconds_bucket{uri=~"/v1/.*"}[5m]))) > 0.5
+        for: 10m
+        labels: {severity: warning, slo: latency}
+        annotations: {summary: "Billing API p95 latency is above 500 ms"}
+      - alert: UsageIngestionUnavailable
+        expr: |
+          sum(rate(http_server_requests_seconds_count{uri="/v1/usage-events",status=~"5.."}[5m]))
+          / clamp_min(sum(rate(http_server_requests_seconds_count{uri="/v1/usage-events"}[5m])), 0.001) > 0.005
+        for: 5m
+        labels: {severity: critical, slo: ingestion}
+        annotations: {summary: "Usage ingestion error ratio is above 0.5%"}
+      - alert: RealtimeProjectionDegraded
+        expr: sum(increase(billing_realtime_usage_events_total{outcome="degraded"}[5m])) > 0
+        labels: {severity: warning, component: redis}
+        annotations: {summary: "Redis real-time projection is operating in degraded mode"}
+      - alert: RealtimeProjectionFailures
+        expr: sum(increase(billing_realtime_usage_events_total{outcome="failure"}[5m])) > 0
+        labels: {severity: critical, component: redis}
+        annotations: {summary: "Redis real-time projection writes are failing"}
+      - alert: BillingJvmHeapPressure
+        expr: sum(jvm_memory_used_bytes{area="heap"}) / clamp_min(sum(jvm_memory_max_bytes{area="heap"}), 1) > 0.85
+        for: 10m
+        labels: {severity: warning, component: jvm}
+        annotations: {summary: "Application heap utilization is above 85%"}
+      - alert: BillingServiceDown
+        expr: up{job="usage-based-saas-billing-platform"} == 0
+        for: 2m
+        labels: {severity: critical, slo: availability}
+        annotations: {summary: "Prometheus cannot scrape the billing service"}
